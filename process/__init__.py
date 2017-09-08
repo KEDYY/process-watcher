@@ -1,25 +1,27 @@
 """Process management and information gathering using /proc filesystem.
 """
 
-from datetime import datetime
-import time
 import os
-import os.path as P
-from collections import deque
-from fnmatch import fnmatch
+import os.path
 import re
+import signal
+import sys
+import time
+from collections import deque
+from datetime import datetime
+from fnmatch import fnmatch
 
 PROC_DIR = '/proc'
 time_now = time.time
 
 # Information text format for
 #  ProcessByPID class
-INFO_RUNNING_FORMAT="""PID {pid}: {command}
+INFO_RUNNING_FORMAT = """PID {pid}: {command}
  Started: {created_datetime:%a, %b %d %H:%M:%S}"""
 
-INFO_ENDED_FORMAT=INFO_RUNNING_FORMAT + "  Ended: {ended_datetime:%a, " \
-                                        "%b %d %H:%M:%S}  (duration {" \
-                                        "duration_text})"
+INFO_ENDED_FORMAT = INFO_RUNNING_FORMAT + "  Ended: {ended_datetime:%a, " \
+                                          "%b %d %H:%M:%S}  (duration {" \
+                                          "duration_text})"
 
 MEM_TEXT = "\n Memory (current/peak) - " \
            "Resident: {status[VmRSS]:,} / {status[VmHWM]:,} kB   " \
@@ -31,6 +33,7 @@ INFO_ENDED_FORMAT += MEM_TEXT
 
 class NoProcessFound(Exception):
     """Indicate a process could not be found."""
+
     def __init__(self, pid):
         super(NoProcessFound, self).__init__('No process with PID {}'
                                              .format(pid))
@@ -58,21 +61,21 @@ class ProcessByPID:
         # Initialize fields to zero in case info() is called.
         self.status = {field: 0 for field in self.status_fields}
 
-        self.path = path = P.join(PROC_DIR, str(pid))
-        if not P.exists(path):
+        self.path = path = os.path.join(PROC_DIR, str(pid))
+        if not os.path.exists(path):
             raise NoProcessFound(pid)
 
-        self.status_path = P.join(path, 'status')
+        self.status_path = os.path.join(path, 'status')
 
         # Get the command that started the process
-        with open(P.join(path, 'cmdline'), encoding='utf-8') as f:
+        with open(os.path.join(path, 'cmdline'), encoding='utf-8') as f:
             cmd = f.read()
             # args are separated by \x00 (Null byte)
             self.command = cmd.replace('\x00', ' ').strip()
 
             if self.command == '':
                 # Some processes (such as kworker) have nothing in cmdline, read comm instead
-                with open(P.join(path, 'comm')) as comm_file:
+                with open(os.path.join(path, 'comm')) as comm_file:
                     self.command = self.executable = comm_file.read().strip()
 
             else:
@@ -80,7 +83,7 @@ class ProcessByPID:
                 self.executable = self.command.split()[0]
 
         # Get the start time (/proc/PID file creation time)
-        self.created_datetime = datetime.fromtimestamp(P.getctime(path))
+        self.created_datetime = datetime.fromtimestamp(os.path.getctime(path))
 
         self.check()
 
@@ -136,7 +139,7 @@ class ProcessByPID:
         # However, with kill if the process is under a separate UID, PermissionError is raised
         # Could try os.kill and fallback to P.exists and save the choice, but that's just overcomplicated
 
-        running = P.exists(self.path)
+        running = os.path.exists(self.path)
         if running:
             self.update_status()
         else:
@@ -174,7 +177,7 @@ class ProcessIDs:
             to_remove = set()
             for pid in seen:
                 # Remove from seen if PID no longer running
-                if not P.exists(P.join(PROC_DIR, str(pid))):
+                if not os.path.exists(os.path.join(PROC_DIR, str(pid))):
                     to_remove.add(pid)
 
             seen -= to_remove
@@ -217,7 +220,7 @@ class ProcessMatcher:
         """
         if self._command_wildcards or self._command_regexs:
             # Matchers requiring comm file
-            path = P.join(PROC_DIR, str(pid), 'comm')
+            path = os.path.join(PROC_DIR, str(pid), 'comm')
             with open(path) as f:
                 comm = f.read().rstrip()
                 for pattern in self._command_wildcards:
@@ -256,3 +259,37 @@ class ProcessMatcher:
         if not pattern.endswith('$'):
             pattern += '$'
         self._command_regexs.append(re.compile(pattern))
+
+
+import fcntl
+
+
+class Daemon:
+    def __init__(self):
+        self.lock_file_path = os.path.join(os.getcwd(), '/var/run/process_watcher.pid')
+        self.lock_file = open(self.lock_file_path, 'w')
+        self.is_running = False
+        try:
+            fcntl.lockf(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            self.lock_file.close()
+            raise ChildProcessError("Daemon already started")
+
+    def daemon(self):
+        if os.fork() > 0:
+            sys.exit(0)
+        os.setsid()
+        if os.fork() > 0:
+            sys.exit(0)
+
+        signal.signal(signal.SIGTERM, self.sig_handler)
+        signal.signal(signal.SIGINT, self.sig_handler)
+        signal.signal(signal.SIGQUIT, self.sig_handler)
+        self.is_running = True
+
+    def sig_handler(self, *args):
+        self.exit()
+
+    def exit(self):
+        fcntl.fcntl(self.lock_file, fcntl.LOCK_UN)
+        self.lock_file.close()
