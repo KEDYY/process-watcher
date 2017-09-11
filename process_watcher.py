@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-# -*- coding:  utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import argparse
 import logging
-import sys
 from argparse import RawTextHelpFormatter
 
 from process import *
@@ -17,6 +16,15 @@ def watch_process(args):
     log_format = '%(asctime)s %(levelname)s: %(message)s' if args.log else '%(message)s'
     logging.basicConfig(format=log_format, level=log_level)
     comms = []
+
+    if args.daemon:
+        try:
+            daemon = Daemon()
+            daemon.daemon()
+        except DaemonException as err:
+            logging.error('Failed to start daemon:::' + err.msg)
+            sys.exit(1)
+
     if args.email:
         try:
             from communicate import email
@@ -83,13 +91,6 @@ def watch_process(args):
     for pid, process in watched_processes.items():
         logging.info(process.info())
 
-    if args.daemon:
-        try:
-            daemon = Daemon()
-            daemon.daemon()
-        except ChildProcessError:
-            logging.exception('Failed to start daemon is already running')
-            sys.exit(1)
     try:
         to_delete = []
         while True:

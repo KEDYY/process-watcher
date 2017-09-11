@@ -15,12 +15,62 @@ Currently written for **Python3**, but shouldn't be difficult to make python2 co
 
 **Example output message**
 
+## Installation
+
+use `pip` or `pip3` (current only support python3) install it
+```
+[sudo] pip3 install proc_watcher
+``` 
+after install successful
+> Collecting proc_watcher
+    Downloading proc_watcher-0.1.1-py3-none-any.whl
+  Collecting notify2 (from proc_watcher)
+    Using cached notify2-0.3.1-py2.py3-none-any.whl
+  Installing collected packages: notify2, proc-watcher
+  Successfully installed notify2-0.3.1 proc-watcher-0.1.1
+
+you can run the command like this
+
+```
+# proc_watcher
+
+
+usage: proc_watcher [-h] [-i SECONDS] [-p PID [PID ...]] [-c COMMAND_PATTERN]
+                    [-crx COMMAND_REGEX] [-w] [-d | -q] [--log] [--notify]
+                    [--email EMAIL_ADDRESS [EMAIL_ADDRESS ...]]
+
+Watch a process and notify when it completes via various     communication protocols.
+    (See README.md for help installing dependencies)
+    
+    [+] indicates the argument may be specified multiple times, for example:
+     proc_watcher -p 1234 4258 -c myapp* -crx "exec\d+" --to person1@domain.com --to person2@someplace.com
+    
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i SECONDS, --interval SECONDS
+                        how often to check on processes. (default: 1.0 seconds)
+  -d, --daemon          watch processes in daemon mode
+  -q, --quiet           don't print anything to stdout except warnings and errors
+
+which process can be watched:
+  -p PID [PID ...], --pid PID [PID ...]
+                        process ID(s) to watch [+]
+  -c COMMAND_PATTERN, --command COMMAND_PATTERN
+                        watch all processes matching the command name pattern. (shell-style wildcards) [+]
+  -crx COMMAND_REGEX, --command-regex COMMAND_REGEX
+                        watch all processes matching the command name regular expression. [+]
+  -w, --watch-new       watch for new processes that match --command. (run forever)
+
+Notify:
+  --notify              send DBUS Desktop notification
+  --email EMAIL_ADDRESS [EMAIL_ADDRESS ...]
+                        email address to send to [+]
+
+```
+
 *Sent in body of messages. Other information from /proc/PID/status can easily be added by modifying the code.*
-```
-PID 18851: /usr/lib/libreoffice/program/soffice.bin --writer --splash-pipe=5
- Started: Thu, Mar 10 18:33:37  Ended: Thu, Mar 10 18:34:26  (duration 0:00:49)
- Memory (current/peak) - Resident: 155,280 / 155,304 kB   Virtual: 1,166,968 / 1,188,216 kB
-```
+
 ## Alternatives
 
 If you are looking for a more substantial daemon monitoring system, people recommend [Monit](https://mmonit.com/monit)
@@ -29,13 +79,6 @@ If you are looking for a more substantial daemon monitoring system, people recom
 
 There is also [upstart](http://upstart.ubuntu.com), which Ubuntu and some other Linux distros have installed. See [Keeping Daemons alive with Upstart](http://www.alexreisner.com/code/upstart).
 
-# Installation
-
-Just create a symbolic link to **process_watcher.py**
-
-For example: `ln -s path/to/process-watcher/process_watcher.py /usr/local/bin/process_watcher`
-
-*I realize there are better ways to package this; if you have suggestions let me know.*
 
 # Running
 
@@ -55,30 +98,15 @@ Watch all **myapp** processes and continue to watch for new ones. Send desktop n
 
 Watch 2 PIDs, continue to watch for multiple command name patterns, email two people.
 
-`process_watcher -p 4242 -p 5655 -c myapp -c anotherapp -c "kworker/[24]" -w --to bob@gmail.com --to alice@gmail.com`
+`process_watcher -p 4242 5655 -c myapp -c anotherapp -c "kworker/[24]" -w --email bob@gmail.com alice@gmail.com`
 
 ## Help
 
 Arguments from **process_watcher --help**
+```bash
+-p means process id ,like -p 23 344 23423 ....
+-c means command name, like -c top -c ps -c ping ....
 
-```
-[+] indicates the argument may be specified multiple times, for example:
- process-watcher -p 1234 -p 4258 -c myapp* -crx "exec\d+" --to person1@domain.com --to person2@someplace.com
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -p PID, --pid PID     process ID(s) to watch [+]
-  -c COMMAND_PATTERN, --command COMMAND_PATTERN
-                        watch all processes matching the command name pattern. (shell-style wildcards) [+]
-  -crx COMMAND_REGEX, --command-regex COMMAND_REGEX
-                        watch all processes matching the command name regular expression. [+]
-  -w, --watch-new       watch for new processes that match --command. (run forever)
-  --to EMAIL_ADDRESS    email address to send to [+]
-  -n, --notify          send DBUS Desktop notification
-  -i SECONDS, --interval SECONDS
-                        how often to check on processes. (default: 15.0 seconds)
-  -q, --quiet           don't print anything to stdout except warnings and errors
-  --log                 log style output (timestamps and log level)
 ```
 
 # Optional Dependencies
@@ -87,7 +115,7 @@ optional arguments:
 
 Requires [notify2](https://notify2.readthedocs.org/en/latest)
 
-`pip install notify2`
+`pip3 install notify2`
 
 Requires **python-dbus**, which is easiest to install with your package manager:
 
@@ -103,6 +131,8 @@ Uses Python's built-in email module. However, you will need to setup a local smt
 I created this after searching for a program to notify via email when a process ends. After a brief search, most suggestions I found were basic unix commands, such as on [StackExchange thread](http://unix.stackexchange.com/questions/55395/is-there-a-program-that-can-send-me-a-notification-e-mail-when-a-process-finishe).
 
 So I decided to create this to refresh my Python skills and hopefully create something others find useful. I'm sure there are other programs that do the same thing, but if you think this code has promise and want to extend it, don't hesitate to send me a PR.
+
+Fork from [arlowhite](https://github.com/arlowhite/process-watcher)
 
 # Ideas & Bugs
 

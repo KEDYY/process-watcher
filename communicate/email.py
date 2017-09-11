@@ -1,4 +1,3 @@
-
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -11,7 +10,7 @@ def send(to=None, process=None, subject_format='{executable} process {pid} ended
     :param process: information about process. (.info() inserted into body)
     :param subject_format: subject format string. (uses process.__dict__)
     """
-    if to is None:
+    if to is None or len(to) < 1:
         raise ValueError('to keyword arg required')
 
     body = process.info()

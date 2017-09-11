@@ -1,6 +1,7 @@
 """Process management and information gathering using /proc filesystem.
 """
 
+import fcntl
 import os
 import os.path
 import re
@@ -38,6 +39,11 @@ class NoProcessFound(Exception):
         super(NoProcessFound, self).__init__('No process with PID {}'
                                              .format(pid))
         self.pid = pid
+
+
+class DaemonException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
 
 
 class ProcessByPID:
@@ -261,35 +267,44 @@ class ProcessMatcher:
         self._command_regexs.append(re.compile(pattern))
 
 
-import fcntl
-
-
 class Daemon:
     def __init__(self):
-        self.lock_file_path = os.path.join(os.getcwd(), '/var/run/process_watcher.pid')
-        self.lock_file = open(self.lock_file_path, 'w')
+        self.lock_file_path = '/var/run/process_watcher.pid'
+        self.lock_file = None
         self.is_running = False
-        try:
-            fcntl.lockf(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            self.lock_file.close()
-            raise ChildProcessError("Daemon already started")
 
     def daemon(self):
+
         if os.fork() > 0:
             sys.exit(0)
         os.setsid()
         if os.fork() > 0:
             sys.exit(0)
 
-        signal.signal(signal.SIGTERM, self.sig_handler)
-        signal.signal(signal.SIGINT, self.sig_handler)
-        signal.signal(signal.SIGQUIT, self.sig_handler)
-        self.is_running = True
+        try:
+            self.lock_file = open(self.lock_file_path, 'w')
+            fcntl.lockf(self.lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-    def sig_handler(self, *args):
+        except PermissionError:
+            raise DaemonException("Daemon should run with root")
+        except BlockingIOError:
+            self.lock_file.close()
+            raise DaemonException("Daemon already started")
+        else:
+            self.lock_file.write('{}'.format(os.getpid()))
+            self.is_running = True
+            signal.signal(signal.SIGTERM, self.sig_handler)
+            signal.signal(signal.SIGINT, self.sig_handler)
+            signal.signal(signal.SIGQUIT, self.sig_handler)
+
+    def sig_handler(self, num, *args):
         self.exit()
+        sys.exit(0)
 
     def exit(self):
-        fcntl.fcntl(self.lock_file, fcntl.LOCK_UN)
-        self.lock_file.close()
+        try:
+            fcntl.fcntl(self.lock_file, fcntl.LOCK_UN)
+            self.lock_file.close()
+            os.remove(self.lock_file_path)
+        except (IOError, BlockingIOError):
+            pass

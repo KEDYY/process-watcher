@@ -2,3 +2,6 @@
 __pycache__/
 
 *.py[cod]
+build/
+dist/
+proc_watcher.egg-info/
