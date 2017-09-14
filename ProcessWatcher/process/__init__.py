@@ -2,6 +2,7 @@
 """
 
 import fcntl
+import logging
 import os
 import os.path
 import re
@@ -275,7 +276,7 @@ class Daemon:
         self.is_running = False
 
     def daemon(self):
-
+        logging.info("start daemon ...")
         if os.fork() > 0:
             sys.exit(0)
         os.setsid()
@@ -297,8 +298,10 @@ class Daemon:
             signal.signal(signal.SIGTERM, self.sig_handler)
             signal.signal(signal.SIGINT, self.sig_handler)
             signal.signal(signal.SIGQUIT, self.sig_handler)
+            logging.info("start daemon success")
 
     def sig_handler(self, num, *args):
+        logging.info("stop daemon ...")
         self.exit()
         sys.exit(0)
 

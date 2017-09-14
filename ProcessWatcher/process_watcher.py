@@ -9,23 +9,25 @@ from argparse import RawTextHelpFormatter
 
 from .process import *
 
-version = '0.2.0'
+version = '0.2.1'
 
 
 def watch_process(args):
     log_level = logging.WARNING if args.quiet else logging.INFO
-    log_format = '%(asctime)s %(levelname)s: %(message)s' if args.log else '%(message)s'
-    logging.basicConfig(format=log_format, level=log_level)
     comms = []
 
     if args.daemon:
+        log_format = '%(asctime)s %(levelname)s: %(message)s'
+        logging.basicConfig(filename='/var/log/process-watcher-daemon.log', format=log_format, level=log_level)
         try:
             daemon = Daemon()
             daemon.daemon()
         except DaemonException as err:
             logging.error('Failed to start daemon:::' + err.msg)
             sys.exit(1)
-
+    else:
+        log_format = '%(asctime)s %(levelname)s: %(message)s' if args.log else '%(message)s'
+        logging.basicConfig(format=log_format, level=log_level)
     if args.email:
         try:
             from .communicate import email
