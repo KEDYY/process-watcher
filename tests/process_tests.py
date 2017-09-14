@@ -1,7 +1,5 @@
-import unittest
-import time
-import re
 import subprocess
+import unittest
 
 from process import *
 

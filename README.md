@@ -43,7 +43,7 @@ Watch a process and notify when it completes via various     communication proto
     (See README.md for help installing dependencies)
     
     [+] indicates the argument may be specified multiple times, for example:
-     proc_watcher -p 1234 4258 -c myapp* -crx "exec\d+" --to person1@domain.com --to person2@someplace.com
+     proc_watcher -p 1234 4258 -c myapp* -crx "exec\d+" --to person1@domain.com person2@someplace.com
     
 
 optional arguments:
@@ -125,6 +125,8 @@ Requires **python-dbus**, which is easiest to install with your package manager:
 
 Uses Python's built-in email module. However, you will need to setup a local smtp server. 
 [This tutorial](https://easyengine.io/tutorials/linux/ubuntu-postfix-gmail-smtp) shows how to setup Postfix with a GMail relay on Ubuntu. 
+or config /usr/local/etc/process-watcher/watcher.conf
+change the settings to your email sender
 
 # Contributions
 

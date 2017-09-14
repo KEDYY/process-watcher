@@ -3,13 +3,14 @@
 
 import argparse
 import logging
+import sys
+import time
 from argparse import RawTextHelpFormatter
 
-from process import *
+from .process import *
 
+version = '0.2.0'
 
-# Load communication protocols based present arguments
-# (library, send function keyword args)
 
 def watch_process(args):
     log_level = logging.WARNING if args.quiet else logging.INFO
@@ -27,7 +28,7 @@ def watch_process(args):
 
     if args.email:
         try:
-            from communicate import email
+            from .communicate import email
 
             comms.append((email, {'to': args.email}))
         except ImportError:
@@ -37,9 +38,9 @@ def watch_process(args):
     if args.notify:
         exception_message = 'Failed to load Desktop Notification module. (required by --notify)'
         try:
-            import communicate.dbus_notify
+            from .communicate import dbus_notify
 
-            comms.append((communicate.dbus_notify, {}))
+            comms.append((dbus_notify, {}))
         except ImportError as err:
             if err.name == 'notify2':
                 logging.error("{}\n 'notify2' python module not installed.\n"
@@ -140,19 +141,18 @@ def watch_process(args):
 
 def parse_from_command_line():
     # Remember to update README.md after modifying
-    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
-                                     description="""Watch a process and notify when it completes via various \
-    communication protocols.
-    (See README.md for help installing dependencies)
-    
-    [+] indicates the argument may be specified multiple times, for example:
-     %(prog)s -p 1234 4258 -c myapp* -crx "exec\d+" --to person1@domain.com --to person2@someplace.com
-    """)
+    parser = argparse.ArgumentParser(
+        epilog='ProcessWatcher v{version} (https://github.com/KEDYY/process-watcher)'.format(version=version),
+        formatter_class=RawTextHelpFormatter,
+        description="""Watch a process and notify when it completes via various communication protocols.\    
+[+] indicates the argument may be specified multiple times, for example:
+%(prog)s -p 1234 4258 -c myapp* -crx "exec\d+" --email person1@domain.com  person2@someplace.com
+""".format(version=version))
 
     parser.add_argument('-i', '--interval', help='how often to check on processes. (default: 1.0 seconds)',
                         type=float, default=1.0, metavar='SECONDS')
 
-    commands = parser.add_argument_group('which process can be watched')
+    commands = parser.add_argument_group('Processes can be watched')
     commands.add_argument('-p', '--pid', help='process ID(s) to watch [+]',
                           nargs='+',
                           type=int,
@@ -178,7 +178,7 @@ def parse_from_command_line():
 
     group_front.add_argument('--log', help="log style output (timestamps and log level)", action='store_true')
 
-    notify = parser.add_argument_group('Notify')
+    notify = parser.add_argument_group('Notification')
     notify.add_argument('--notify', help='send DBUS Desktop notification', action='store_true')
     notify.add_argument('--email', help='email address to send to [+]', nargs='+', metavar='EMAIL_ADDRESS')
     # Just print help and exit if no arguments specified.
@@ -190,7 +190,6 @@ def parse_from_command_line():
 
 
 def main():
-    global args
     args = parse_from_command_line()
     watch_process(args)
 

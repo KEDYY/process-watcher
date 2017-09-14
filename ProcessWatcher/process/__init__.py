@@ -12,6 +12,7 @@ from collections import deque
 from datetime import datetime
 from fnmatch import fnmatch
 
+__all__ = ['ProcessIDs', 'ProcessByPID', 'ProcessMatcher', 'NoProcessFound', 'Daemon', 'DaemonException']
 PROC_DIR = '/proc'
 time_now = time.time
 
