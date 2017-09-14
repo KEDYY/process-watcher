@@ -76,7 +76,7 @@ class ProcessByPID:
         self.status_path = os.path.join(path, 'status')
 
         # Get the command that started the process
-        with open(os.path.join(path, 'cmdline'), encoding='utf-8') as f:
+        with open(os.path.join(path, 'cmdline'), encoding=sys.getfilesystemencoding()) as f:
             cmd = f.read()
             # args are separated by \x00 (Null byte)
             self.command = cmd.replace('\x00', ' ').strip()
@@ -227,8 +227,11 @@ class ProcessMatcher:
         :return: True if matches, otherwise False
         """
         if self._command_wildcards or self._command_regexs:
-            # Matchers requiring comm file
+            # Matches requiring comm file
             path = os.path.join(PROC_DIR, str(pid), 'comm')
+            # if process not exists
+            if not os.path.exists(path):
+                return False
             with open(path) as f:
                 comm = f.read().rstrip()
                 for pattern in self._command_wildcards:

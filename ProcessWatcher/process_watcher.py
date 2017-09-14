@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -9,7 +8,7 @@ from argparse import RawTextHelpFormatter
 
 from .process import *
 
-version = '0.2.1'
+version = '0.2.2'
 
 
 def watch_process(args):
